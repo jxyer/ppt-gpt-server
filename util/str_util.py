@@ -1,3 +1,5 @@
+import re
+
 from bs4 import BeautifulSoup
 
 
@@ -11,3 +13,13 @@ def parser_ppt_summary(text):
         content = ppt.get_text(strip=True)
         ppt_summary.append((title, content))
     return ppt_summary
+
+
+# 截取```json 内容
+def extract_json(text):
+    if text.find("```") != -1:
+        pattern = r"```(.*?)```"
+        content = re.findall(pattern, text, re.DOTALL)
+        if content:
+            return content[0].strip()
+    return text

@@ -1,101 +1,30 @@
 import json
 
-from flask import Flask
-from flask_cors import cross_origin
+import asyncio
+import websockets
 
 from ppt.ppt import PPT
 from util.json_encoder import BaseEncoder
 
-app = Flask(__name__)
+
+async def send(websocket, slide):
+    print("发送")
+    await websocket.send(json.dumps(slide, cls=BaseEncoder, ensure_ascii=False))
 
 
-"""
-  幻灯片数据格式
-  {
-    id: 'test-slide-1',
-    elements: [
-      {
-        type: 'shape',
-        id: '4cbRxp',
-        left: 0,
-        top: 200,
-        width: 546,
-        height: 362.5,
-        viewBox: [200, 200],
-        path: 'M 0 0 L 0 200 L 200 200 Z',
-        fill: '#5b9bd5',
-        fixedRatio: false,
-        opacity: 0.7,
-        rotate: 0
-      },
-      {
-        type: 'shape',
-        id: 'ookHrf',
-        left: 0,
-        top: 0,
-        width: 300,
-        height: 320,
-        viewBox: [200, 200],
-        path: 'M 0 0 L 0 200 L 200 200 Z',
-        fill: '#5b9bd5',
-        fixedRatio: false,
-        flipV: true,
-        rotate: 0
-      },
-      {
-        type: 'text',
-        id: 'idn7Mx',
-        left: 355,
-        top: 65.25,
-        width: 585,
-        height: 188,
-        lineHeight: 1.2,
-        content: '<p><strong><span style=\'font-size:  112px\'>PPTIST</span></strong></p>',
-        rotate: 0,
-        defaultFontName: 'Microsoft Yahei',
-        defaultColor: '#333'
-      },
-      {
-        type: 'text',
-        id: '7stmVP',
-        left: 355,
-        top: 253.25,
-        width: 585,
-        height: 56,
-        content: '<p><span style=\'font-size:  24px\'>基于 Vue 3.x + TypeScript 的在线演示文稿应用</span></p>',
-        rotate: 0,
-        defaultFontName: 'Microsoft Yahei',
-        defaultColor: '#333'
-      },
-      {
-        type: 'line',
-        id: 'FnpZs4',
-        left: 361,
-        top: 238,
-        start: [0, 0],
-        end: [549, 0],
-        points: ['', ''],
-        color: '#5b9bd5',
-        style: 'solid',
-        width: 2,
-      },
-    ],
-    background: {
-      type: 'solid',
-      color: '#ffffff',
-    },
-  },
-
-"""
-@app.route('/topic/<string:topic>')
-@cross_origin(supports_credentials=True)
-def generate_topic(topic):
-    ppt = PPT(topic=topic)
-    return json.dumps(ppt.data.elements,cls=BaseEncoder,ensure_ascii=False)
+async def handler(websocket):
+    while True:
+        data = await websocket.recv()
+        print("topic", data)
+        ppt = PPT()
+        await ppt.generate_ppt(topic=data,
+                               websocket=websocket,
+                               slide_finish=send)
 
 
+# start a websocket server
+server = websockets.serve(handler, "localhost", 8765)
+asyncio.get_event_loop().run_until_complete(server)
+asyncio.get_event_loop().run_forever()  # run forever
 
-
-if __name__ == '__main__':
-    # app.run()
-    PPT("年轻人为什么不结婚")
+# PPT("年轻人为什么不结婚")
